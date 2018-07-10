@@ -5,6 +5,7 @@ import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer
 import org.deeplearning4j.models.word2vec.Word2Vec
 import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.factory.Nd4j
+import java.io.FileOutputStream
 
 
 fun main(args: Array<String>) {
@@ -16,9 +17,30 @@ fun main(args: Array<String>) {
 }
 
 fun word2vecWithD4J(args: Array<String>) {
-    val wordVectors = WordVectorSerializer.readWord2VecModel(File(ClassLoader.getSystemResource("ja.vec").file))
+    val wordVectors = WordVectorSerializer.readWord2VecModel(getFile("ja.vec"))
     val results = args.map { getWordVectorMatrix(wordVectors, it) }
     todo(results)
+}
+
+private fun getFile(resourceName: String): File {
+    val res = ClassLoader.getSystemClassLoader().getResource(resourceName)
+    return when(res.toString().startsWith("jar:")) {
+        true -> {
+            val input = ClassLoader.getSystemClassLoader().getResourceAsStream(resourceName)
+            val file = File.createTempFile("tmpfile", ".tmp")
+            val out = FileOutputStream(file)
+            val bytes = ByteArray(1024)
+            var read = input.read(bytes)
+            while (read != -1) {
+                out.write(bytes, 0, read)
+                read = input.read(bytes)
+            }
+            file.apply {
+                deleteOnExit()
+            }
+        }
+        false -> File(res.file)
+    }
 }
 
 private fun getWordVectorMatrix(word2Vec: Word2Vec, word: String): Pair<String, INDArray?> {
